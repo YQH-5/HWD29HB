@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生日 ── 時光隧道</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #0A1128; /* 深邃海軍藍大背景 */
+            color: #FFEDDF; /* 柔和杏桃奶白主要文字 */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            position: relative;
+            width: 90%;
+            max-width: 800px;
+            height: 80vh;
+            max-height: 550px;
+        }
+        
+        /* 基礎卡片設定 */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            
+            /* 預設隱藏 */
+            opacity: 0;
+            visibility: hidden;
+            display: none; 
+            
+            background: #16223F; 
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            padding: 40px;
+            border: 1px solid rgba(107, 122, 153, 0.25); 
+            overflow: hidden; 
+        }
+        
+        /* 當卡片被切換到時（Active），啟用顯示 */
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            display: flex; /* 正常的年份頁用 flex 佈局 */
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        
+        /* ─── ✨ 第一頁與第二頁專用的獨立滿版樣式 ✨ ─── */
+        .slide.special-cover.active {
+            display: block; /* 封面頁改用 block 佈局，防止照片被擠壓 */
+            padding: 0;    /* 清除內邊距讓照片滿版 */
+        }
+        
+        /* 滿版照片 */
+        .special-cover .bg-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        
+        /* 半透明遮罩 */
+        .special-cover .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 17, 40, 0.6); 
+            z-index: 2;
+        }
+        
+        /* 文字內容：絕對鎖定在正中央 */
+        .special-cover .center-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85%;
+            text-align: center;
+            z-index: 3;
+        }
+        .special-cover h1 {
+            font-size: 2.8rem;
+            color: #FFEDDF;
+            letter-spacing: 4px;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+            margin: 0;
+        }
+        .special-cover p {
+            font-size: 1.3rem;
+            color: #FFEDDF; 
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+            margin-top: 15px;
+        }
+        
+        /* ─── 年份卡片主文本區 ─── */
+        .text-zone {
+            width: 100%;
+            padding-right: 40px;
+        }
+        .year-title {
+            font-size: 2rem;
+            color: #FFEDDF;
+            font-weight: bold;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .gift-tag {
+            display: inline-block;
+            background: rgba(107, 122, 153, 0.2);
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            color: #6B7A99;
+            border: 1px solid rgba(107, 122, 153, 0.4);
+            margin-bottom: 20px;
+        }
+        .content {
+            font-size: 1.15rem;
+            line-height: 1.8;
+            color: #E2E8F0;
+            white-space: pre-line;
+        }
+        
+        /* 右下角小照片區（拍立得風格基本設定） */
+        .photo-zone {
+            position: absolute;
+            right: 35px;
+            bottom: 35px;
+            width: 130px;
+            height: 150px;
+            background: #FFFFFF;
+            padding: 6px 6px 20px 6px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            transform: rotate(4deg);
+            transition: transform 0.3s ease, box-shadow 0.3s ease; /* 平滑流暢的過渡動畫 */
+            border-radius: 4px;
+            z-index: 5;
+        }
+        
+        /* 照片容器內的所有相片共用基礎設定 */
+        .photo-zone img {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: calc(100% - 12px);
+            height: calc(100% - 26px);
+            object-fit: cover;
+            border-radius: 2px;
+            transition: opacity 0.3s ease; /* 讓切換照片有淡入淡出的高級感 */
+        }
+        
+        /* 預設把所有年份的雙相片驚喜張先藏起來 */
+        .photo-zone img.hover-img {
+            opacity: 0;
+            z-index: 2;
+        }
+        
+        /* 當滑鼠指著相片框時的基本動作：稍微放大、陰影加深、擺正 */
+        .photo-zone:hover {
+            transform: rotate(0deg) scale(1.35); /* 精緻微放大 1.35 倍，絕對不擋字 */
+            box-shadow: 0 12px 28px rgba(0,0,0,0.7);
+        }
+        
+        /* 🔥 修正關鍵：只有當相片框屬於雙相片年份 (2024-2026) 時，滑鼠指著才做相片交替！ 🔥 */
+        .photo-zone.two-photos:hover img.default-img {
+            opacity: 0;
+        }
+        .photo-zone.two-photos:hover img.hover-img {
+            opacity: 1;
+        }
+        
+        /* 導航按鈕 */
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 237, 223, 0.05);
+            border: 1px solid rgba(255, 237, 223, 0.15);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            color: #6B7A99;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+            user-select: none;
+            z-index: 10;
+        }
+        .nav-btn:hover {
+            background: #6B7A99;
+            color: #0A1128;
+            border-color: #6B7A99;
+        }
+        #prevBtn { left: -60px; }
+        #nextBtn { right: -60px; }
+        
+        /* 頁碼提示點點 */
+        .progress-dots {
+            position: absolute;
+            bottom: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+        }
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #1C2B4F;
+            transition: all 0.3s;
+        }
+        .dot.active {
+            background: #6B7A99;
+            width: 14px;
+            border-radius: 3px;
+        }
+        
+        /* 手機板螢幕優化 */
+        @media (max-width: 768px) {
+            .container { height: 75vh; }
+            .slide.active { padding: 25px; justify-content: flex-start; }
+            .year-title { font-size: 1.5rem; }
+            .content { font-size: 1.05rem; line-height: 1.6; padding-right: 0; }
+            .special-cover .center-content h1 { font-size: 2rem; }
+            .special-cover .center-content p { font-size: 1.1rem; }
+            .photo-zone { 
+                position: relative; 
+                right: auto; 
+                bottom: auto; 
+                align-self: flex-end;
+                margin-top: auto;
+                width: 100px;
+                height: 115px;
+                padding: 4px 4px 14px 4px;
+            }
+            .photo-zone img {
+                top: 4px;
+                left: 4px;
+                width: calc(100% - 8px);
+                height: calc(100% - 18px);
+            }
+            .photo-zone:hover {
+                transform: none; /* 手機端取消 hover 放大 */
+            }
+            #prevBtn { left: 15px; bottom: -55px; top: auto; transform: none; }
+            #nextBtn { right: 15px; bottom: -55px; top: auto; transform: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <button class="nav-btn" id="prevBtn">&lt;</button>
+    <button class="nav-btn" id="nextBtn">&gt;</button>
+
+    <div class="slide special-cover active">
+        <img src="cover.jpg" alt="封面背景照片" class="bg-img">
+        <div class="overlay"></div>
+        
+        <div class="center-content">
+            <h1>生日 ── 時光隧道</h1>
+        </div>
+    </div>
+
+    <!-- 第二頁：已在下方成功加入小字提示 -->
+    <div class="slide special-cover">
+        <img src="ready.jpg" alt="準備好了嗎背景照片" class="bg-img">
+        <div class="overlay"></div>
+
+        <div class="center-content">
+            <h1>準備好了嗎？</h1>
+            <p>我們要坐時光機穿越回去~</p>
+            <span style="display: block; font-size: 0.95rem; color: rgba(255, 237, 223, 0.7); margin-top: 8px; letter-spacing: 1px;">（指著照片會有驚喜哦😆）</span>
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2011年 ── 14 歲</div>
+            <div class="gift-tag">🎁 禮物：軟糖</div>
+            <div class="content">14歲的你會不會超級喜歡吃甜食🍬？
+            那時候的你是個嘴巴很甜，還是只會講幹話的小屁孩？</div>
+        </div>
+        <div class="photo-zone"><img src="2011.jpg" alt="14歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2012年 ── 15 歲</div>
+            <div class="gift-tag">🎁 禮物：襪子</div>
+            <div class="content">15歲正是熱血青少年，應該常常運動吧！
+            穿上它繼續在生活裡奔跑吧🏃🏻！</div>
+        </div>
+        <div class="photo-zone"><img src="2012.jpg" alt="15歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2013年 ── 16 歲</div>
+            <div class="gift-tag">🎁 禮物：毛巾</div>
+            <div class="content">小屁孩要好好沖涼、洗得香香的，養成乾淨的好習慣！
+            不然就會臭烘烘的💩？</div>
+        </div>
+        <div class="photo-zone"><img src="2013.jpg" alt="16歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2014年 ── 17 歲</div>
+            <div class="gift-tag">🎁 禮物：小籃球 - 有點事故之後再給你😅</div>
+            <div class="content">聽說那時候還是籃球隊的哦🏀？
+            送你這個小籃球，紀念一下你那段在球場上閃閃發亮的風雲青春。</div>
+        </div>
+        <div class="photo-zone two-photos">
+            <img src="2014.jpg" alt="17歲正常張" class="default-img">
+            <img src="2014-2.jpg" alt="17歲驚喜張" class="hover-img">
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2015年 ── 18 歲</div>
+            <div class="gift-tag">🎁 禮物：盲盒</div>
+            <div class="content">18 歲踏入人生的下個階段了。
+            生活有時候就像開盲盒一樣，驚喜不斷，祝你天天都抽到好運🤩！</div>
+        </div>
+        <div class="photo-zone"><img src="2015.jpg" alt="18歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2016年 ── 19 歲</div>
+            <div class="gift-tag">🎁 禮物：Toto</div>
+            <div class="content">19 歲大男孩，長大咯！
+            可以開賭了？祝你手氣大開，做什麼決定都順順利利。(中大獎記得養我！🤣）</div>
+        </div>
+        <div class="photo-zone"><img src="2016.jpg" alt="19歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2017年 ── 20 歲</div>
+            <div class="gift-tag">🎁 禮物：手機支架</div>
+            <div class="content">20 歲是不是在努力讀書呢？
+            送你這個支架，隨時幫你把手機撐好，感覺你在書桌前做事時會很需要它，做你最穩的後盾💪🏻。</div>
+        </div>
+        <div class="photo-zone"><img src="2017.jpg" alt="20歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2018年 ── 21 歲</div>
+            <div class="gift-tag">🎁 禮物：牌子</div>
+            <div class="content">21 歲是不是去 NS了？
+            那時候應該第一次要離家那麼久，偶爾也會想家吧？（還是可能也像我一樣🤪，其實根本不會？哈哈哈哈哈）</div>
+        </div>
+        <div class="photo-zone"><img src="2018.jpg" alt="21歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2019年 ── 22 歲</div>
+            <div class="gift-tag">🎁 禮物：手套</div>
+            <div class="content">聽説你在NS還是衝在最前面的👮🏻‍♂️！
+            這雙手一定吃了很多苦，希望這個禮物能帶給你一些溫暖。</div>
+        </div>
+        <div class="photo-zone"><img src="2019.jpg" alt="22歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2020年 ── 23 歲</div>
+            <div class="gift-tag">🎁 禮物：藥</div>
+            <div class="content">23 歲應該是忙忙碌碌的一年😤。
+            生活再忙、累了也要好好照顧自己哦。</div>
+        </div>
+        <div class="photo-zone"><img src="2020.jpg" alt="23歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2021年 ── 24 歲</div>
+            <div class="gift-tag">🎁 禮物：香薰蠟燭</div>
+            <div class="content">這時候應該已經開啟大學生活，感覺讀書壓力和考試應該排山倒海吧📚？
+            晚上點起這個香薰放鬆一下，好好舒緩一下壓力。</div>
+        </div>
+        <div class="photo-zone"><img src="2021.jpg" alt="24歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2022年 ── 25 歲</div>
+            <div class="gift-tag">🎁 禮物：睡衣</div>
+            <div class="content">換上舒服的睡衣，拋開白天的煩惱。
+            希望你都能睡個好覺、做個好夢😴！</div>
+        </div>
+        <div class="photo-zone"><img src="2022.jpg" alt="25歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2023年 ── 26 歲</div>
+            <div class="gift-tag">🎁 禮物：咖啡杯</div>
+            <div class="content">正式進入職場成為社會🐮🐴！
+            是不是每天都需要續命咖啡，讓這個杯子陪你度過每個疲憊的辦公室瞬間。</div>
+        </div>
+        <div class="photo-zone"><img src="2023.jpg" alt="26歲" class="default-img"></div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2024年 ── 27 歲</div>
+            <div class="gift-tag">🎁 禮物：毛衣</div>
+            <div class="content">2024 年是不是喜歡上了滑雪⛷️！
+            以後出國看雪，都要記得做好保暖！</div>
+        </div>
+        <div class="photo-zone two-photos">
+            <img src="2024.jpg" alt="27歲正常張" class="default-img">
+            <img src="2024-2.jpg" alt="27歲驚喜張" class="hover-img">
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2025年 ── 28 歲</div>
+            <div class="gift-tag">🎁 禮物：護膚品</div>
+            <div class="content">2025 年，我們認識啦！
+            送你這個保濕護膚品，記得好好保養！畢竟以後你的臉可是每天都要被我捏的，嘿嘿😏。</div>
+        </div>
+        <div class="photo-zone two-photos">
+            <img src="2025.jpg" alt="28歲正常張" class="default-img">
+            <img src="2025-2.jpg" alt="28歲驚喜張" class="hover-img">
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="text-zone">
+            <div class="year-title">2026年 ── 29 歲</div>
+            <div class="gift-tag">🎁 禮物：JB Trip</div>
+            <div class="content">我們在一起啦~
+            送你趟JB trip！姐姐帶你飛（雖然都是你在plan 哈哈哈哈哈🤣）</div>
+        </div>
+        <div class="photo-zone two-photos">
+            <img src="2026.jpg" alt="29歲正常張" class="default-img">
+            <img src="2026-2.jpg" alt="29歲驚喜張" class="hover-img">
+        </div>
+    </div>
+
+    <div class="slide" style="justify-content: center; align-items: center; text-align: center;">
+        <h1 style="font-size: 2.8rem; letter-spacing: 4px;">── 未完待續。</h1>
+    </div>
+
+    <div class="progress-dots" id="dotsContainer"></div>
+</div>
+
+<script>
+    const slides = document.querySelectorAll('.slide');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const dotsContainer = document.getElementById('dotsContainer');
+    let currentSlide = 0;
+
+    slides.forEach((_, index) => {
+        const dot = document.createElement('div');
+        dot.classList.add('dot');
+        if(index === 0) dot.classList.add('active');
+        dotsContainer.appendChild(dot);
+    });
+    const dots = document.querySelectorAll('.dot');
+
+    function showSlide(index) {
+        slides[currentSlide].classList.remove('active');
+        dots[currentSlide].classList.remove('active');
+        currentSlide = (index + slides.length) % slides.length;
+        slides[currentSlide].classList.add('active');
+        dots[currentSlide].classList.add('active');
+    }
+
+    prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
+    nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
+        if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+    });
+</script>
+</body>
+</html>
